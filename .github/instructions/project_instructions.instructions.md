@@ -733,7 +733,7 @@ git push origin main
 2. 备份当前版本到backup目录
 3. Git pull拉取最新代码
 4. 检查并更新Python依赖 (`pip install -r requirements.txt`)
-5. 构建前端 (`npm install && npm run build`)
+5. 构建前端 (`npm install; npm run build`)
 6. 重启launcher服务
 7. 失败时自动调用rollback.bat
 
@@ -743,7 +743,7 @@ git push origin main
 2. 创建Python虚拟环境 (`python -m venv venv`)
 3. 安装Python依赖
 4. 创建必要目录 (logs, screenshots, backup)
-5. 构建前端项目
+5. 构建前端项目 (`npm install; npm run build`)
 6. 复制.env.example为.env
 
 #### rollback.bat - 回滚脚本

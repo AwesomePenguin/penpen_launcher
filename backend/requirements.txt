@@ -1,0 +1,36 @@
+# PenPen Launcher Backend Dependencies
+
+# Core web framework
+fastapi==0.120.3
+uvicorn[standard]==0.38.0
+
+# Data validation and serialization
+pydantic==2.12.3
+
+# System monitoring
+psutil==7.1.2
+
+# # Windows registry access
+# winreg2==1.0.1 # there is no modual called winreg2, use built-in winreg instead
+
+# Environment variables
+python-dotenv==1.2.1
+
+# Async HTTP client
+aiohttp==3.13.2
+
+# VDF (Valve Data Format) parsing for Steam
+vdf==3.4
+
+# CORS middleware
+python-multipart==0.0.20
+
+# WebSocket support (included in FastAPI, but explicit for clarity)
+websockets==15.0.1
+
+# Logging
+structlog==25.5.0
+
+# Development dependencies
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
