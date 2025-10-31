@@ -1,0 +1,112 @@
+name: Performance Issue
+description: Report performance problems or optimization suggestions
+title: '[PERFORMANCE] '
+labels: ['performance', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        报告性能问题或优化建议。请提供详细的性能数据。
+        
+  - type: textarea
+    id: performance_issue
+    attributes:
+      label: Performance Issue Description
+      description: 详细描述性能问题
+      placeholder: 描述性能问题的具体表现...
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: 选择性能问题相关的组件
+      options:
+        - Core API
+        - Main UI  
+        - Overlay UI
+        - Watchdog Service
+        - Process Manager
+        - Frontend
+        - Game Launch
+        - System Startup
+        - Memory Usage
+        - CPU Usage
+        - Other
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Performance Impact
+      description: 性能影响的严重程度
+      options:
+        - Critical - System unusable
+        - High - Significantly impacts user experience
+        - Medium - Noticeable but manageable
+        - Low - Minor impact
+    validations:
+      required: true
+      
+  - type: textarea
+    id: current_performance
+    attributes:
+      label: Current Performance Metrics
+      description: 当前的性能数据
+      placeholder: |
+        - CPU使用率: %
+        - 内存使用: MB
+        - 启动时间: 秒
+        - 响应时间: 毫秒
+        - 其他相关指标...
+    validations:
+      required: false
+      
+  - type: textarea
+    id: expected_performance
+    attributes:
+      label: Expected Performance
+      description: 期望的性能指标
+      placeholder: |
+        - 目标CPU使用率: %
+        - 目标内存使用: MB
+        - 目标启动时间: 秒
+        - 目标响应时间: 毫秒
+    validations:
+      required: false
+      
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Steps to Reproduce Performance Issue
+      description: 重现性能问题的步骤
+      placeholder: |
+        1. 启动系统
+        2. 执行特定操作
+        3. 观察性能指标
+    validations:
+      required: true
+      
+  - type: textarea
+    id: system_specs
+    attributes:
+      label: System Specifications
+      description: 系统配置信息
+      placeholder: |
+        - CPU: 
+        - RAM: 
+        - Storage: 
+        - GPU: 
+        - 其他相关硬件
+    validations:
+      required: false
+      
+  - type: textarea
+    id: proposed_optimization
+    attributes:
+      label: Proposed Optimization
+      description: 建议的优化方案
+    validations:
+      required: false

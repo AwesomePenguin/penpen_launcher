@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/AwesomePenguin/penpen_launcher/discussions
+    about: Ask questions or start discussions about PenPen Launcher
+  - name: Documentation
+    url: https://github.com/AwesomePenguin/penpen_launcher/blob/main/docs/project_overview.md
+    about: Check the project documentation first

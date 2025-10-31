@@ -1,0 +1,86 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for PenPen Launcher
+title: '[FEATURE] '
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提出功能建议！请详细描述您希望添加的功能。
+        
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: Feature Description
+      description: 详细描述您希望添加的功能
+      placeholder: 描述新功能的具体内容...
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: component
+    attributes:
+      label: Related Component
+      description: 选择相关的组件
+      options:
+        - Core API
+        - Main UI  
+        - Overlay UI
+        - Watchdog Service
+        - Process Manager
+        - Frontend
+        - Deployment
+        - System Integration
+        - Controller Support
+        - Other
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: 功能的优先级
+      options:
+        - High - Critical for project success
+        - Medium - Important but not critical
+        - Low - Nice to have
+    validations:
+      required: true
+      
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case / Problem
+      description: 描述这个功能解决的问题或使用场景
+      placeholder: |
+        - 当前的问题或限制
+        - 目标用户群体
+        - 使用场景描述
+    validations:
+      required: true
+      
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: 您建议如何实现这个功能
+      placeholder: 详细描述您的解决方案想法...
+    validations:
+      required: false
+      
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: 您考虑过的其他解决方案
+    validations:
+      required: false
+      
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: 其他相关信息、截图、参考链接等
+    validations:
+      required: false
