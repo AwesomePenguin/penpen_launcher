@@ -4,6 +4,26 @@ applyTo: '**'
 
 # PenPen Launcher 项目指导说明
 
+## 目录
+
+1. [项目概述](#项目概述)
+2. [项目架构](#项目架构)
+3. [编程规范](#编程规范)
+   - [语言支持](#语言支持)
+   - [命名规范](#命名规范)
+   - [Python后端规范](#python后端规范)
+   - [前端规范](#前端规范)
+   - [API设计规范](#api设计规范)
+   - [配置管理](#配置管理)
+4. [开发指南](#开发指南)
+5. [特殊要求](#特殊要求)
+6. [兼容性要求](#兼容性要求)
+7. [开发环境](#开发环境)
+8. [部署和更新策略](#部署和更新策略)
+9. [开发注意事项](#开发注意事项)
+
+---
+
 ## 项目概述
 
 PenPen Launcher 是一个专为电视游戏环境优化的PC启动器，提供类似游戏主机的用户体验。系统包含多个微服务架构组件，支持手柄导航、游戏内覆盖界面、崩溃自动恢复和云端日志监控。
@@ -107,42 +127,449 @@ penpen_launcher/
 
 ### Python后端规范
 
-#### 代码风格
-- 使用 Python 3.8+ 特性
-- 遵循 PEP 8 规范
-- 使用 type hints 进行类型注解
-- 函数和类使用 docstring 文档
+#### 代码风格和PEP合规性
 
-#### 异步编程
-- 优先使用 `asyncio` 和 `async/await`
-- 网络请求使用异步客户端（aiohttp, websockets）
-- 文件操作使用 `aiofiles`
+##### PEP 8 - 代码风格指南
+- **行长度**: 最大79字符，文档字符串和注释72字符
+- **缩进**: 使用4个空格，禁用制表符
+- **空行**: 顶级函数和类定义前后两个空行，方法定义前后一个空行
+- **导入**: 每行一个导入，标准库→第三方→本地模块顺序
+- **引号**: 优先使用双引号，保持一致性
+
+```python
+# ✅ 正确的导入和类定义示例
+import asyncio
+import logging
+from typing import Optional, Dict, List
+
+from fastapi import FastAPI, WebSocket
+from pydantic import BaseModel
+
+from .process_manager import ProcessManager
+
+class SystemManager:
+    """Manages system state and game processes."""
+    
+    def __init__(self, config: Dict[str, str]) -> None:
+        self.active_game_pid: Optional[int] = None
+        self.system_state: str = "booting"
+    
+    async def launch_game(self, request: GameLaunchRequest) -> Dict[str, str]:
+        """Launch a game with given parameters."""
+        try:
+            process_info = await self._start_game_process(request)
+            return {"status": "success", "pid": str(process_info.pid)}
+        except Exception as e:
+            self.logger.error(f"游戏启动失败: {e}")
+            raise GameLaunchError(f"启动失败: {str(e)}") from e
+```
+
+##### PEP 484/526 - 类型提示
+- **所有公共函数**: 必须包含类型提示
+- **复杂返回值**: 使用 Union, Optional, Dict, List 等
+- **异步函数**: 明确 Coroutine 返回类型
+- **类属性**: 使用变量注解
+
+```python
+# 类型提示示例
+from typing import Optional, Dict, List, Protocol
+
+class GameProcessProtocol(Protocol):
+    async def start(self, executable: Path) -> int: ...
+    async def terminate(self, pid: int) -> bool: ...
+
+class ProcessManager:
+    active_processes: Dict[str, int] = {}
+    
+    def __init__(self, config_path: Optional[Path] = None) -> None:
+        self.config_path = config_path or Path("config.yml")
+    
+    async def register_callback(
+        self, 
+        callback: Callable[[str], Coroutine[Any, Any, None]]
+    ) -> None:
+        """Register process event callback."""
+        self._callbacks.append(callback)
+```
+
+##### PEP 257 - 文档字符串规范
+- **所有公共模块、类、函数**: 必须有docstring
+- **格式**: 使用Google风格或NumPy风格
+- **内容**: 简要描述、参数、返回值、异常
+
+```python
+class WebSocketManager:
+    """Manages WebSocket connections for real-time communication.
+    
+    Attributes:
+        clients: Set of active WebSocket connections
+        message_queue: Queue for outbound messages
+    """
+    
+    async def broadcast_message(
+        self, 
+        message: Dict[str, Any], 
+        exclude_client: Optional[WebSocket] = None
+    ) -> int:
+        """Broadcast message to all connected clients.
+        
+        Args:
+            message: JSON-serializable message to broadcast
+            exclude_client: Optional client to exclude from broadcast
+            
+        Returns:
+            Number of clients that received the message
+            
+        Raises:
+            BroadcastError: If message serialization fails
+        """
+        pass
+```
+
+##### PEP 585/604 - 现代类型注解（Python 3.9+）
+- **内置容器**: 使用 `list[str]` 替代 `List[str]`
+- **联合类型**: 使用 `str | None` 替代 `Union[str, None]`
+- **向后兼容**: 项目支持Python 3.8+，继续使用typing模块
+
+##### 代码质量工具配置
+```python
+# pyproject.toml 配置示例
+[tool.black]
+line-length = 79
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 79
+multi_line_output = 3
+
+[tool.flake8]
+max-line-length = 79
+extend-ignore = ["E203", "W503"]
+per-file-ignores = [
+    "__init__.py:F401",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+```
+
+#### 异步编程最佳实践
+- **优先使用 `asyncio`**: 所有I/O操作使用async/await
+- **异步客户端**: aiohttp用于HTTP，websockets用于WebSocket
+- **资源管理**: 使用async context managers
+- **错误传播**: 正确处理async异常
+
+```python
+# 异步编程示例
+import aiohttp
+from contextlib import asynccontextmanager
+
+class ApiClient:
+    @asynccontextmanager
+    async def session(self) -> aiohttp.ClientSession:
+        session = aiohttp.ClientSession()
+        try:
+            yield session
+        finally:
+            await session.close()
+    
+    async def get_game_info(self, game_id: str) -> Dict[str, Any]:
+        async with self.session() as session:
+            async with session.get(f"{self.base_url}/games/{game_id}") as response:
+                response.raise_for_status()
+                return await response.json()
+```
 
 #### 日志处理
-- 使用 Python `logging` 模块
-- 配置适当的日志级别（DEBUG, INFO, WARNING, ERROR, CRITICAL）
-- 结构化日志，包含时间戳、组件名称、日志级别
-- 支持日志轮转和云端上传
+- **结构化日志**: 使用dictConfig或logging.config
+- **日志级别**: 正确使用DEBUG、INFO、WARNING、ERROR、CRITICAL
+- **日志格式**: 包含时间戳、模块名、级别、消息
+- **日志轮转**: 防止日志文件过大
 
-#### 错误处理
-- 使用具体的异常类型
-- 提供详细的错误消息（支持中文）
-- 实现优雅降级和故障恢复
-- 记录异常到日志系统
+**配置要点:**
+- Console handler (INFO级别) + File handler (DEBUG级别)
+- RotatingFileHandler with 10MB maxBytes, 5 backup files
+- 统一格式: `%(asctime)s - %(name)s - %(levelname)s - %(message)s`
+
+#### 错误处理和异常设计
+- **自定义异常**: 为不同错误类型创建专门的异常类
+- **异常链**: 使用 `raise ... from ...` 保留原始异常
+- **异常文档**: 在docstring中记录可能的异常
+
+```python
+# 异常设计示例
+class LauncherError(Exception):
+    """Base exception for launcher errors."""
+    pass
+
+class GameLaunchError(LauncherError):
+    """Raised when game launch fails."""
+    
+    def __init__(self, message: str, game_id: str, exit_code: Optional[int] = None):
+        super().__init__(message)
+        self.game_id = game_id
+        self.exit_code = exit_code
+
+# 异常处理模式
+async def launch_game_safe(game_id: str) -> None:
+    try:
+        await launch_game(game_id)
+    except subprocess.SubprocessError as e:
+        raise GameLaunchError(f"游戏启动失败: {e}", game_id=game_id) from e
+```
 
 #### 进程管理
-- 使用 `subprocess` 和 `psutil` 管理子进程
-- 实现进程生命周期监控
-- 支持优雅关闭和强制终止
-- 进程间通信使用 WebSocket 或 IPC
+- **subprocess 最佳实践**: 使用 asyncio.create_subprocess_*
+- **资源清理**: 确保进程正确终止
+- **信号处理**: 优雅关闭机制
+- **进程监控**: 使用 psutil 进行高级进程管理
+
+```python
+# 进程管理模式
+class ProcessManager:
+    def __init__(self) -> None:
+        self.managed_processes: Dict[str, asyncio.subprocess.Process] = {}
+    
+    async def start_managed_process(
+        self, name: str, cmd: List[str]
+    ) -> asyncio.subprocess.Process:
+        process = await asyncio.create_subprocess_exec(*cmd)
+        self.managed_processes[name] = process
+        return process
+    
+    async def shutdown_all(self) -> None:
+        """Gracefully shutdown all managed processes."""
+        for name, process in self.managed_processes.items():
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+```
 
 ### 前端规范
 
 #### 技术栈
-- NextJS 框架
+- NextJS 框架（Pages Router）
+- TypeScript + React + Tailwind CSS
 - 支持手柄导航的UI组件
 - 响应式设计，适配电视屏幕
 - **构建策略**: 推送源码到仓库，在目标机器上构建
+
+#### TypeScript/TSX 编程规范
+
+##### 严格类型检查
+- **启用严格模式**: 确保 `tsconfig.json` 中 `"strict": true`
+- **禁用 any 类型**: 避免使用 `any`，优先使用具体类型或 `unknown`
+- **强制参数类型**: 所有函数参数必须明确指定类型
+- **返回值类型**: 复杂函数应明确指定返回值类型
+
+```typescript
+// ✅ 正确示例
+interface GameLaunchProps {
+  game: GameInfo;
+  onLaunch: (gameId: string) => Promise<void>;
+  isLaunching?: boolean;
+}
+
+const GameCard: React.FC<GameLaunchProps> = ({ game, onLaunch, isLaunching = false }) => {
+  const handleLaunch = async (): Promise<void> => {
+    try {
+      await onLaunch(game.id);
+    } catch (error: unknown) {
+      console.error('启动游戏失败:', error);
+    }
+  };
+
+  return <div className="game-card">{/* JSX 内容 */}</div>;
+};
+
+// ❌ 错误示例 - 避免 any
+const BadComponent = ({ game, onLaunch }: any) => { /* 缺少类型检查 */ };
+```
+
+##### 接口和类型定义
+- **自定义接口**: 为复杂数据结构定义明确的接口
+- **Props 接口**: 每个组件的 props 都应有对应的接口定义
+- **API 响应类型**: 为后端 API 响应定义类型接口
+- **事件处理器类型**: 明确指定事件处理器的参数类型
+
+```typescript
+// API 响应类型
+interface ApiResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: string;
+  timestamp: string;
+}
+
+// 事件处理器类型
+interface GameLibraryProps {
+  games: GameInfo[];
+  onGameSelect: (game: GameInfo) => void;
+  onGameLaunch: (gameId: string) => Promise<void>;
+}
+
+// React Hook 返回值类型
+interface UseGameLibraryReturn {
+  games: GameInfo[];
+  loading: boolean;
+  error: string | null;
+  refreshGames: () => Promise<void>;
+}
+```
+
+##### React 组件规范
+- **函数组件**: 优先使用函数组件 + Hooks
+- **React.FC 类型**: 使用 `React.FC<PropsInterface>` 明确组件类型
+- **useState 泛型**: 为复杂状态指定泛型类型
+- **useEffect 依赖**: 明确指定依赖数组，避免无限重渲染
+
+```typescript
+// 组件状态类型
+interface GameLibraryState {
+  games: GameInfo[];
+  selectedGame: GameInfo | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const GameLibrary: React.FC<GameLibraryProps> = ({ 
+  onGameSelect, 
+  onGameLaunch 
+}) => {
+  const [state, setState] = useState<GameLibraryState>({
+    games: [],
+    selectedGame: null,
+    loading: true,
+    error: null
+  });
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Enter' && state.selectedGame) {
+      onGameSelect(state.selectedGame);
+    }
+  };
+
+  return <div onKeyDown={handleKeyDown}>{/* 组件内容 */}</div>;
+};
+```
+
+##### 手柄导航类型定义
+```typescript
+// 手柄输入类型
+interface GamepadButton {
+  pressed: boolean;
+  touched: boolean;
+  value: number;
+}
+
+interface GamepadState {
+  connected: boolean;
+  index: number;
+  buttons: GamepadButton[];
+  axes: number[];
+  timestamp: number;
+}
+
+interface NavigationHandler {
+  onUp: () => void;
+  onDown: () => void;
+  onLeft: () => void;
+  onRight: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onMenu: () => void;
+}
+
+// 导航上下文类型
+interface GamepadContextType {
+  gamepadState: GamepadState | null;
+  isConnected: boolean;
+  registerNavigationHandler: (handler: NavigationHandler) => void;
+  unregisterNavigationHandler: () => void;
+}
+```
+
+##### ESLint 配置强化
+```javascript
+// 推荐的 ESLint 规则补充
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  {
+    rules: {
+      // TypeScript 严格规则
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/prefer-interface': 'error',
+      
+      // React 规则
+      'react/prop-types': 'off', // TypeScript 已提供类型检查
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+      
+      // 一般代码质量
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'object-shorthand': 'error'
+    }
+  }
+]);
+```
+
+##### 代码组织规范
+- **文件命名**: 组件文件使用 PascalCase（`GameCard.tsx`）
+- **目录结构**: 
+  ```
+  src/
+  ├── components/          # 可复用组件
+  │   ├── GameCard/
+  │   │   ├── GameCard.tsx
+  │   │   ├── GameCard.module.css
+  │   │   └── index.ts
+  ├── pages/              # 页面组件
+  ├── hooks/              # 自定义 Hooks
+  ├── types/              # 类型定义文件
+  ├── utils/              # 工具函数
+  ├── contexts/           # React Context
+  └── services/           # API 服务
+  ```
+- **导入顺序**: React → 第三方库 → 项目内部模块
+- **接口命名**: 使用 `Interface` 或描述性名称，避免 `I` 前缀
+
+##### 性能优化
+- **React.memo**: 对重渲染频繁的组件使用 memo
+- **useCallback**: 为传递给子组件的函数使用 useCallback
+- **useMemo**: 为计算密集型操作使用 useMemo
+- **懒加载**: 大型组件使用 React.lazy + Suspense
+
+```typescript
+// 性能优化示例
+const GameCard = React.memo<GameCardProps>(({ game, onLaunch }) => {
+  const handleLaunch = useCallback(async () => {
+    await onLaunch(game.id);
+  }, [game.id, onLaunch]);
+
+  const gameImage = useMemo(() => {
+    return game.image_url || '/default-game-image.png';
+  }, [game.image_url]);
+
+  return (
+    <div onClick={handleLaunch}>
+      <img src={gameImage} alt={game.name} />
+    </div>
+  );
+});
+```
 
 #### 前端部署流程
 - **开发环境**: 使用 `npm run dev` 进行开发
@@ -155,6 +582,8 @@ penpen_launcher/
 - 大图标、易读字体，适合客厅环境
 - 支持手柄方向键导航
 - 流畅的动画和过渡效果
+- **可访问性**: 支持键盘和手柄导航，合理的焦点管理
+- **响应式设计**: 适配不同电视分辨率（1080p, 1440p, 4K）
 
 ### API设计规范
 
@@ -299,170 +728,29 @@ git push origin main
 ### 部署脚本设计
 
 #### update.bat - 一键更新脚本
-```batch
-@echo off
-echo 正在检查更新...
-
-REM 保存当前运行状态
-echo 停止服务...
-taskkill /f /im python.exe 2>nul
-
-REM 备份当前版本
-if exist "backup" rd /s /q backup
-mkdir backup
-xcopy /s /e /y *.py backup\
-if exist "frontend\out" xcopy /s /e /y frontend\out backup\frontend_out\
-
-REM 拉取最新代码
-echo 拉取最新代码...
-git pull origin main
-
-REM 检查是否有新的依赖
-echo 检查依赖更新...
-call venv\Scripts\activate.bat
-pip install -r requirements.txt
-
-REM 构建前端（在目标机器上）
-if exist "frontend\package.json" (
-    echo 构建前端...
-    cd frontend
-    
-    REM 检查Node.js
-    node --version >nul 2>&1
-    if errorlevel 1 (
-        echo 错误: Node.js未安装，无法构建前端
-        cd ..
-        goto :error
-    )
-    
-    REM 安装/更新前端依赖
-    echo 安装前端依赖...
-    npm install
-    
-    REM 执行构建
-    echo 执行前端构建...
-    npm run build
-    
-    REM 检查构建是否成功
-    if not exist "out\index.html" (
-        echo 错误: 前端构建失败
-        cd ..
-        goto :error
-    )
-    
-    echo 前端构建成功
-    cd ..
-) else (
-    echo 警告: 未找到前端项目文件
-)
-
-REM 重启服务
-echo 重启服务...
-start "" python launcher.py
-
-echo 更新完成！
-pause
-exit /b 0
-
-:error
-echo 更新失败，尝试回滚...
-call rollback.bat
-exit /b 1
-```
+**关键步骤**:
+1. 停止当前运行的Python进程
+2. 备份当前版本到backup目录
+3. Git pull拉取最新代码
+4. 检查并更新Python依赖 (`pip install -r requirements.txt`)
+5. 构建前端 (`npm install && npm run build`)
+6. 重启launcher服务
+7. 失败时自动调用rollback.bat
 
 #### install.bat - 初始安装脚本
-```batch
-@echo off
-echo 安装 PenPen Launcher...
-
-REM 检查Git是否安装
-git --version >nul 2>&1
-if errorlevel 1 (
-    echo 错误: 请先安装Git
-    pause
-    exit /b 1
-)
-
-REM 检查Python是否安装
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo 错误: 请先安装Python 3.8+
-    pause
-    exit /b 1
-)
-
-REM 创建虚拟环境
-echo 创建Python虚拟环境...
-python -m venv venv
-call venv\Scripts\activate.bat
-
-REM 安装依赖
-echo 安装Python依赖...
-pip install -r requirements.txt
-
-REM 创建必要目录
-mkdir logs 2>nul
-mkdir screenshots 2>nul
-mkdir backup 2>nul
-
-REM 检查Node.js（如果需要构建前端）
-if exist "frontend\package.json" (
-    echo 检查Node.js...
-    node --version >nul 2>&1
-    if errorlevel 1 (
-        echo 警告: Node.js未安装，前端需要手动构建
-    ) else (
-        echo 安装前端依赖...
-        cd frontend
-        npm install
-        npm run build
-        cd ..
-    )
-)
-
-REM 复制环境变量模板
-if not exist ".env" (
-    copy .env.example .env
-    echo 请编辑 .env 文件配置必要参数
-)
-
-echo.
-echo 安装完成！
-echo 下一步:
-echo 1. 编辑 .env 文件
-echo 2. 运行 start.bat 启动系统
-pause
-```
+**关键步骤**:
+1. 检查Git、Python、Node.js安装状态
+2. 创建Python虚拟环境 (`python -m venv venv`)
+3. 安装Python依赖
+4. 创建必要目录 (logs, screenshots, backup)
+5. 构建前端项目
+6. 复制.env.example为.env
 
 #### rollback.bat - 回滚脚本
-```batch
-@echo off
-echo 回滚到上一版本...
-
-if not exist "backup" (
-    echo 错误: 没有找到备份文件
-    pause
-    exit /b 1
-)
-
-REM 停止服务
-taskkill /f /im python.exe 2>nul
-
-REM 恢复备份
-echo 恢复文件...
-xcopy /s /e /y backup\*.py .
-if exist "backup\frontend_out" (
-    if exist "frontend\out" rd /s /q frontend\out
-    xcopy /s /e /y backup\frontend_out frontend\out\
-)
-
-REM 重启服务
-echo 重启服务...
-start "" python launcher.py
-
-echo 回滚完成！
-pause
-```
+**关键步骤**:
+1. 停止服务
+2. 从backup目录恢复文件
+3. 重启服务
 
 ### 版本控制策略
 - **Git标签**: 使用语义化版本标签 (v1.0.0, v1.1.0)
@@ -470,47 +758,9 @@ pause
 - **本地版本检查**: 实现简单的版本比较机制
 
 ### 应用内更新功能设计
-```python
-# 在core_api.py中添加更新检查端点
-@app.get("/api/system/check-update")
-async def check_for_updates():
-    """检查GitHub是否有新版本"""
-    try:
-        # 获取本地Git信息
-        local_commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], 
-            cwd=".",
-            text=True
-        ).strip()
-        
-        # 获取远程最新commit（需要fetch）
-        subprocess.run(["git", "fetch", "origin", "main"], cwd=".")
-        remote_commit = subprocess.check_output(
-            ["git", "rev-parse", "origin/main"],
-            cwd=".",
-            text=True
-        ).strip()
-        
-        has_update = local_commit != remote_commit
-        
-        return {
-            "has_update": has_update,
-            "local_commit": local_commit[:7],
-            "remote_commit": remote_commit[:7]
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.post("/api/system/update")
-async def perform_update():
-    """执行系统更新"""
-    try:
-        # 调用更新脚本
-        subprocess.Popen(["update.bat"], shell=True)
-        return {"status": "update_started"}
-    except Exception as e:
-        return {"error": str(e)}
-```
+在core_api.py中添加更新检查和执行端点:
+- `/api/system/check-update`: 检查GitHub是否有新版本
+- `/api/system/update`: 执行系统更新 (调用update.bat)
 
 ### 部署最佳实践
 1. **预部署检查**: 确保Git、Python、Node.js已安装
