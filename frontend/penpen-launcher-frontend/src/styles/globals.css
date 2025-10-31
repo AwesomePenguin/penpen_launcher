@@ -1,26 +1,235 @@
 @import "tailwindcss";
 
+/* Custom CSS variables for TV-optimized design */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Console color palette */
+  --console-dark: #0f0f0f;
+  --console-surface: #1a1a1a;
+  --console-border: #2a2a2a;
+  --console-accent: #3a3a3a;
+  --console-text: #ffffff;
+  --console-text-secondary: #b3b3b3;
+  --console-focus: #0ea5e9;
+  --console-success: #10b981;
+  --console-warning: #f59e0b;
+  --console-error: #ef4444;
+
+  /* PenPen brand colors */
+  --penpen-600: #0284c7;
+  --penpen-700: #0369a1;
+
+  /* TV-optimized spacing and sizing */
+  --tv-font-sm: 18px;
+  --tv-font-base: 20px;
+  --tv-font-lg: 24px;
+  --tv-font-xl: 28px;
+  --tv-font-2xl: 32px;
+  --tv-font-4xl: 48px;
+
+  /* Shadows and effects */
+  --shadow-tv-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-tv-focus: 0 0 0 3px rgba(14, 165, 233, 0.5);
+  --shadow-tv-elevated: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Global styles for TV interface */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 16px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--console-dark);
+  color: var(--console-text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  cursor: none;
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Focus styles for controller navigation */
+.focusable {
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.focusable:focus,
+.focusable.focused {
+  box-shadow: var(--shadow-tv-focus);
+  transform: scale(1.02);
+}
+
+/* TV-safe area */
+.tv-safe-area {
+  padding: 3% 5%;
+  box-sizing: border-box;
+}
+
+/* Component styles */
+.btn-primary {
+  background-color: var(--penpen-600);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-tv-card);
+  transition: all 0.2s ease;
+  min-height: 48px;
+  min-width: 120px;
+  border: none;
+  cursor: pointer;
+  font-size: var(--tv-font-base);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--penpen-700);
+  transform: scale(1.02);
+}
+
+.btn-secondary {
+  background-color: var(--console-surface);
+  color: var(--console-text);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--console-border);
+  box-shadow: var(--shadow-tv-card);
+  transition: all 0.2s ease;
+  min-height: 48px;
+  min-width: 120px;
+  cursor: pointer;
+  font-size: var(--tv-font-base);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background-color: var(--console-accent);
+  transform: scale(1.02);
+}
+
+/* Game card styles */
+.game-card {
+  background-color: var(--console-surface);
+  border: 1px solid var(--console-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-tv-card);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.game-card:hover,
+.game-card.focused {
+  border-color: var(--console-focus);
+  box-shadow: var(--shadow-tv-elevated);
+  transform: scale(1.05);
+}
+
+/* Grid layouts */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+@media (min-width: 1920px) {
+  .game-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 2560px) {
+  .game-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 2.5rem;
+    padding: 2rem;
+  }
+}
+
+/* Text utilities */
+.text-tv-readable {
+  font-size: var(--tv-font-base);
+  line-height: 1.6;
+}
+
+.text-tv-title {
+  font-size: var(--tv-font-2xl);
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.text-tv-hero {
+  font-size: var(--tv-font-4xl);
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+/* Animations */
+@keyframes focus-pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes slide-in {
+  0% { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes scale-in {
+  0% { 
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-focus-pulse {
+  animation: focus-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
 }

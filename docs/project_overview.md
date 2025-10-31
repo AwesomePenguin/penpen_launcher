@@ -1,4 +1,4 @@
-# PenPen Launcher - 完整项目文档
+# PenPen Launcher 喷喷启动器 - 完整项目文档
 
 ## 项目简介
 
@@ -348,7 +348,7 @@ class MainUI:
         """创建主UI窗口"""
         try:
             self.window = webview.create_window(
-                'TV Game Launcher',
+                'PenPen Launcher',
                 f'{self.core_api_url}',
                 fullscreen=True,
                 easy_drag=False,
@@ -1654,7 +1654,7 @@ if __name__ == "__main__":
 ```python
 #!/usr/bin/env python3
 """
-TV Game Launcher - 主启动脚本
+PenPen Launcher - 主启动脚本
 """
 
 import asyncio
@@ -1682,7 +1682,7 @@ logger = logging.getLogger("launcher")
 
 async def main():
     """主函数"""
-    logger.info("TV Game Launcher 启动")
+    logger.info("PenPen Launcher 启动")
     
     # 确保在正确的目录运行
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1718,7 +1718,7 @@ async def main():
         except Exception as e:
             logger.error(f"关闭过程中发生错误: {e}")
         
-        logger.info("TV Game Launcher 已退出")
+        logger.info("PenPen Launcher 已退出")
 
 if __name__ == "__main__":
     try:
@@ -1735,7 +1735,7 @@ if __name__ == "__main__":
 #### install.bat (Windows)
 ```batch
 @echo off
-echo 安装 TV Game Launcher...
+echo 安装 PenPen Launcher...
 
 REM 创建虚拟环境
 python -m venv venv

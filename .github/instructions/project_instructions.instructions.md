@@ -2,7 +2,7 @@
 applyTo: '**'
 ---
 
-# PenPen Launcher 项目指导说明
+# PenPen Launcher 喷喷启动器 项目指导说明
 
 ## 目录
 
