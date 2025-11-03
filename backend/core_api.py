@@ -17,6 +17,7 @@ from models import (
     GameInfo, LaunchRequest, LaunchResult, SystemStatus, 
     ApiResponse, GamePlatform, GameCategory
 )
+from process_manager import ProcessManager
 
 
 # 配置日志
@@ -76,14 +77,24 @@ async def lifespan(app: FastAPI):
     # 启动时初始化
     logger.info("PenPen Launcher 后端服务启动中...")
     
-    # 这里可以初始化游戏扫描器、进程管理器等
-    # await initialize_services()
+    # 初始化服务组件
+    global process_manager, game_scanner
+    from game_scanner import GameScanner
+    
+    game_scanner = GameScanner()
+    logger.info("游戏扫描器已初始化")
+    
+    process_manager = ProcessManager()
+    await process_manager.start_monitoring()
+    logger.info("进程管理器已初始化")
     
     yield
     
     # 关闭时清理
     logger.info("PenPen Launcher 后端服务关闭中...")
-    # await cleanup_services()
+    if process_manager:
+        await process_manager.stop_monitoring()
+        logger.info("进程管理器已停止")
 
 
 # 创建 FastAPI 应用
@@ -139,47 +150,15 @@ async def get_games(
         installed_only: 仅显示已安装的游戏
     """
     try:
-        # 临时返回模拟数据，稍后替换为真实游戏扫描
-        from datetime import datetime
-        mock_games = [
-            GameInfo(
-                id="steam_271590",
-                name="Grand Theft Auto V",
-                description="洛圣都和布莱恩郡的世界比以往任何时候都更加广阔、丰富和多样",
-                developer="Rockstar North",
-                publisher="Rockstar Games",
-                executable_path="C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grand Theft Auto V\\GTA5.exe",
-                platform=GamePlatform.STEAM,
-                category=GameCategory.ACTION,
-                is_installed=True,
-                play_time=1200,
-                rating=5,
-                tags=["开放世界", "动作", "犯罪"],
-                release_date="2015-04-14",
-                image_url="https://steamcdn-a.akamaihd.net/steam/apps/271590/header.jpg",
-                last_played=datetime.fromisoformat("2023-10-30T15:30:00")
-            ),
-            GameInfo(
-                id="steam_1091500",
-                name="Cyberpunk 2077",
-                description="在这个开放世界的动作冒险故事中，成为一个拥有高科技增强器的都市雇佣兵",
-                developer="CD Projekt RED",
-                publisher="CD Projekt",
-                executable_path="C:\\Program Files (x86)\\Steam\\steamapps\\common\\Cyberpunk 2077\\bin\\x64\\Cyberpunk2077.exe",
-                platform=GamePlatform.STEAM,
-                category=GameCategory.RPG,
-                is_installed=True,
-                play_time=4560,
-                rating=4,
-                tags=["RPG", "开放世界", "未来科幻"],
-                release_date="2020-12-10",
-                image_url="https://steamcdn-a.akamaihd.net/steam/apps/1091500/header.jpg",
-                last_played=datetime.fromisoformat("2023-11-01T20:15:00")
-            )
-        ]
+        # 使用游戏扫描器获取真实游戏数据
+        if not game_scanner:
+            raise HTTPException(status_code=500, detail="游戏扫描器未初始化")
+        
+        logger.info("获取游戏列表请求")
+        all_games = await game_scanner.scan_all_games(force_refresh=False)
         
         # 应用筛选条件
-        filtered_games = mock_games
+        filtered_games = all_games
         if platform:
             filtered_games = [game for game in filtered_games if game.platform == platform]
         if category:
@@ -187,7 +166,9 @@ async def get_games(
         if installed_only:
             filtered_games = [game for game in filtered_games if game.is_installed]
         
-        logger.info(f"返回 {len(filtered_games)} 个游戏，筛选条件: platform={platform}, category={category}")
+        logger.info(f"返回 {len(filtered_games)} 个游戏，筛选条件: platform={platform}, category={category}, installed_only={installed_only}")
+        logger.info(f"找到的游戏: {[game.name for game in filtered_games]}")
+        
         return filtered_games
         
     except Exception as e:
@@ -195,33 +176,52 @@ async def get_games(
         raise HTTPException(status_code=500, detail="获取游戏列表失败")
 
 @app.post("/api/games/{game_id}/launch", response_model=LaunchResult)
-async def launch_game(game_id: str, request: LaunchRequest):
+async def launch_game(game_id: str):
     """启动指定游戏"""
     try:
         logger.info(f"尝试启动游戏: {game_id}")
         
-        # 这里应该调用进程管理器启动游戏
-        # 临时返回模拟启动结果
+        # 检查进程管理器是否已初始化
+        if not process_manager:
+            raise HTTPException(status_code=500, detail="进程管理器未初始化")
         
-        # 模拟启动延迟
-        await asyncio.sleep(1)
+        # 检查游戏扫描器是否已初始化
+        if not game_scanner:
+            raise HTTPException(status_code=500, detail="游戏扫描器未初始化")
+        
+        # 获取游戏信息
+        games = await game_scanner.scan_all_games()
+        game_info = None
+        for game in games:
+            if game.id == game_id:
+                game_info = game
+                break
+        
+        if not game_info:
+            raise HTTPException(status_code=404, detail=f"未找到游戏: {game_id}")
+        
+        # 创建默认的启动请求
+        request = LaunchRequest(game_id=game_id, launch_options=None)
+        
+        # 使用进程管理器启动游戏
+        result = await process_manager.launch_game(game_info, request)
         
         # 广播游戏状态变化
-        await websocket_manager.broadcast({
-            "type": "gameStatusChange",
-            "data": {
-                "game_id": game_id,
-                "status": "launching"
-            },
-            "timestamp": "2025-10-31T10:30:00Z"
-        })
+        if result.success:
+            await websocket_manager.broadcast({
+                "type": "gameStatusChange",
+                "data": {
+                    "game_id": game_id,
+                    "status": "launched",
+                    "process_id": result.process_id
+                },
+                "timestamp": "2025-11-03T" + "".join(str(asyncio.get_event_loop().time()).split('.')[0]) + "Z"
+            })
         
-        return LaunchResult(
-            success=True,
-            process_id=12345,
-            error=None
-        )
+        return result
         
+    except HTTPException:
+        raise  # 重新抛出HTTP异常
     except Exception as e:
         logger.error(f"启动游戏失败: {e}")
         return LaunchResult(

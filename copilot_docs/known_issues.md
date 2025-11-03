@@ -17,7 +17,39 @@
 
 ## Current Quick Notes
 
-*No issues currently noted. This section will be updated as issues are discovered during development tasks.*
+### [CRITICAL] Process Management - Steam URL launcher returns incorrect process IDs
+- **Discovered during**: Phase 3 game launch integration testing with Wallpaper Engine
+- **Quick note**: Steam URL protocol (`steam://rungameid/431960`) creates temporary `cmd.exe` processes, returning their PIDs instead of actual game process PIDs. This causes tracking issues for background applications like Wallpaper Engine that have persistent services.
+- **Behavior observed**: 
+  - First launch triggers Steam client startup and auto-update process
+  - Subsequent launches return different PIDs each time (cmd.exe processes)
+  - Wallpaper Engine background service remains running with same PID (19452)
+  - Launch endpoint can't properly track actual game processes
+- **Next step**: Implement process discovery after Steam launch to find actual game processes
+
+### [HIGH] Steam Integration - Process tracking for background/service games
+- **Discovered during**: Wallpaper Engine launch testing
+- **Quick note**: Some Steam games (Wallpaper Engine, overlay apps) run as background services. Current launcher assumes 1:1 mapping between launch command and game process, but Steam games may have complex process hierarchies.
+- **Next step**: Enhance process tracking to discover actual game processes after Steam launch
+- **Discovered during**: Phase 2 system status integration testing
+- **Quick note**: System status (CPU, memory, storage) currently uses 10-second polling. WebSocket would provide real-time updates and reduce API overhead for frequently changing data.
+- **Next step**: Implement WebSocket broadcasting for system status updates
+
+### [ENHANCEMENT] System Status - Enhanced visualizations
+- **Discovered during**: Phase 2 system status integration testing  
+- **Quick note**: Current system status shows text-based percentages. Could add progress bars, charts, or visual indicators for better TV/controller interface experience.
+- **Next step**: Design and implement visual system status components (progress bars, mini charts)
+
+### [MEDIUM] Steam Scanner - Limited metadata from VDF-only scanning
+- **Discovered during**: Backend-frontend integration testing
+- **Quick note**: Current Steam scanner only uses local VDF files, missing rich metadata (images, descriptions, play time, last played). Only returns basic info: name, app_id, install_dir, executable_path.
+- **Next step**: Implement Steam Store API integration for enhanced metadata (no API key required)
+- **Supporting docs**: See detailed analysis in `copilot_docs/supporting_docs/steam_data_sources_analysis.md`
+
+### [LOW] Frontend - Next.js image hostname configuration needs restart
+- **Discovered during**: Frontend integration testing  
+- **Quick note**: Updated next.config.ts to allow arbitrary image hosts, but requires frontend server restart to take effect
+- **Next step**: Document in deployment notes that config changes require restart
 
 ---
 

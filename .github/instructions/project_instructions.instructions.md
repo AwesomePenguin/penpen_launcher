@@ -698,10 +698,14 @@ const GameCard = React.memo<GameCardProps>(({ game, onLaunch }) => {
 ### 命令行工具
 - **PowerShell**: 优先使用PowerShell语法
 - **Windows CMD**: 兼容传统批处理脚本
+- **网络请求**: 使用 `Invoke-RestMethod` 和 `Invoke-WebRequest`，避免bash命令如curl
 - **示例命令格式**:
   ```powershell
   # PowerShell 语法
   Get-Process | Where-Object {$_.Name -eq "python"}
+  
+  # PowerShell HTTP请求
+  Invoke-RestMethod -Uri "http://localhost:8000/api/games" -Method GET
   
   # 批处理兼容
   tasklist | findstr python
